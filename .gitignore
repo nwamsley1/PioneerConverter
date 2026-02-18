@@ -18,3 +18,8 @@ installers/macos/pkgroot/
 
 # Logs
 *.log
+
+# Local perf artifacts and generated outputs
+tests/perf/results/
+tests/perf/convert_test/
+tests/fixtures/raw/arrow_out/

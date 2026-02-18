@@ -2,6 +2,12 @@ name: Reusable Binary Validation
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: "Version/tag to stamp into published binaries (e.g. v1.2.3)"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -36,7 +42,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ github.token }}
-          fetch-depth: 1
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: true
           submodules: false
           lfs: false
 
@@ -45,13 +53,26 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Force authenticated GitHub git URLs
+        run: |
+          git config --global --unset-all url."https://github.com/".insteadOf || true
+          git config --global url."https://x-access-token:${{ github.token }}@github.com/".insteadOf "https://github.com/"
+        shell: bash
+
       - name: Publish target binary
         run: |
+          VERSION="${{ inputs.version }}"
+          if [[ -z "${VERSION}" ]]; then
+            VERSION="0.0.0-dev"
+          fi
+          VERSION="${VERSION#v}"
+
           dotnet publish PioneerConverter.csproj -c Release \
             -r "${{ matrix.rid }}" \
             -p:PublishSingleFile=false \
             -p:PublishTrimmed=false \
             -p:EnableSourceControlManagerQueries=false \
+            -p:Version="${VERSION}" \
             --self-contained true \
             -o "dist/${{ matrix.rid }}"
         shell: bash
@@ -60,6 +81,43 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x "dist/${{ matrix.rid }}/PioneerConverter"
         shell: bash
+
+      - name: Verify binary version (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          EXPECTED_VERSION="${{ inputs.version }}"
+          if [[ -z "${EXPECTED_VERSION}" ]]; then
+            EXPECTED_VERSION="0.0.0-dev"
+          fi
+          EXPECTED_VERSION="${EXPECTED_VERSION#v}"
+
+          VERSION_OUTPUT="$(dist/${{ matrix.rid }}/PioneerConverter --version)"
+          ACTUAL_VERSION="$(printf "%s" "${VERSION_OUTPUT}" | awk '{print $2}')"
+          if [[ "${ACTUAL_VERSION}" != "${EXPECTED_VERSION}" ]]; then
+            echo "Version mismatch: expected ${EXPECTED_VERSION}, got ${ACTUAL_VERSION}" >&2
+            exit 1
+          fi
+        shell: bash
+
+      - name: Verify binary version (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $expectedVersion = "${{ inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($expectedVersion)) {
+            $expectedVersion = "0.0.0-dev"
+          }
+          $expectedVersion = $expectedVersion.TrimStart('v')
+
+          $versionOutput = & "dist/${{ matrix.rid }}/PioneerConverter.exe" --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Version check command failed with exit code $LASTEXITCODE"
+          }
+
+          $actualVersion = ($versionOutput -split '\s+')[-1]
+          if ($actualVersion -ne $expectedVersion) {
+            throw "Version mismatch: expected $expectedVersion, got $actualVersion"
+          }
+        shell: pwsh
 
       - name: Smoke test binary (Unix)
         if: runner.os != 'Windows'

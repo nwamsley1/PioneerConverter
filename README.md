@@ -15,12 +15,15 @@ There are three ways to get **PioneerConverter**:
     - macOS&nbsp;Intel (x64)
     - Linux (x64)
     - Windows (x64). 
+
+   On Apple Silicon, Thermo RawFileReader is x64-only, so PioneerConverter runs via Rosetta 2.
+   The macOS arm64 installer will install Rosetta automatically when needed.
 3. **Precompiled binaries** – Zipped binaries are available for Linux, macOS, and Windows. Each archive contains a `bin` directory with the `PioneerConverter` executable and a `lib` directory with its dependencies. Extract them anywhere and, on Linux or macOS, you may need to run `chmod +x bin/PioneerConverter` before executing.
 4. **Build from source** – If you prefer to build the tool yourself, follow the steps in the [Build from source](#build-from-source) section below.
 
 ## Usage
 
-Provide a single `.raw` file or a directory containing them. Converted Arrow tables are written to `arrow_out` inside the input directory.
+Provide a single `.raw` file or a directory containing them. By default, converted Arrow tables are written to `arrow_out` inside the input directory.
 
 ```bash
 # convert a single file
@@ -28,11 +31,25 @@ PioneerConverter path/to/file.raw
 
 # convert a directory with options
 PioneerConverter path/to/dir -b 5000 -n 4
+
+# convert and write output to a custom directory
+PioneerConverter path/to/dir -o path/to/output
+
+# incremental conversion: only process new .raw files
+PioneerConverter path/to/dir --skip-existing
+
+# print converter version
+PioneerConverter --version
 ```
 
 Options
 - `-b, --batch-size`  number of scans per batch (default: 10000)
-- `-n, --threads`     threads to use (default: 2)
+- `-o, --output-dir` output directory for `.arrow` files (default: `<input_dir>/arrow_out`)
+- `--skip-existing` skip files whose existing `.arrow` output appears complete
+- `-n, --concurrent-files` number of files to convert at the same time (default: 2)
+- `-t, --threads-per-file` scan extraction threads used for each file (default: 3)
+- `--scan-chunk-size` scan chunk size when using scan threads (default: 128)
+- `--version` show program version
 - `-h, --help`        show help
 
 ## Build from source

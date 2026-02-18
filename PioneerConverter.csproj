@@ -5,6 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
+    <InformationalVersion>$(Version)</InformationalVersion>
     <PublishReadyToRun>true</PublishReadyToRun>
     <!-- Add rpath to look in the same directory -->
     <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
@@ -31,6 +33,11 @@
       <HintPath>Libs\Apache.Arrow.dll</HintPath>
       <Private>true</Private>
     </Reference>
+  </ItemGroup>
+
+  <!-- Prevent test sources (including generated obj files) from being compiled into the app -->
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
   </ItemGroup>
 
   <!-- Copy runtime libraries only -->

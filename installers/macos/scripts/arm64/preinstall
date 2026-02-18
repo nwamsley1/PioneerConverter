@@ -1,0 +1,24 @@
+#!/bin/bash
+set -euo pipefail
+
+# PioneerConverter's Thermo dependency is x64-only on macOS, so arm64 installs
+# require Rosetta to be present before first launch.
+if [[ "$(/usr/bin/uname -m)" != "arm64" ]]; then
+  exit 0
+fi
+
+if /usr/sbin/pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1; then
+  echo "Rosetta 2 already installed."
+  exit 0
+fi
+
+echo "Installing Rosetta 2 (required for PioneerConverter on Apple Silicon)..."
+/usr/sbin/softwareupdate --install-rosetta --agree-to-license
+
+if /usr/sbin/pkgutil --pkg-info com.apple.pkg.RosettaUpdateAuto >/dev/null 2>&1; then
+  echo "Rosetta 2 installation complete."
+  exit 0
+fi
+
+echo "Rosetta 2 installation failed." >&2
+exit 1

@@ -36,12 +36,13 @@ try {
     Copy-Item -Path $FixturePath -Destination $tmpFixture
 
     Write-Host "Running conversion smoke test"
-    & $exePath $tmpFixture -b 50 -n 1
+    $outputDir = Join-Path $tmpDir "custom_out"
+    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir
     if ($LASTEXITCODE -ne 0) {
         throw "Conversion smoke test failed with exit code $LASTEXITCODE"
     }
 
-    $outputFile = Join-Path $tmpDir "arrow_out/smoke.arrow"
+    $outputFile = Join-Path $outputDir "smoke.arrow"
     if (!(Test-Path $outputFile)) {
         throw "Expected output file missing: $outputFile"
     }
@@ -49,6 +50,33 @@ try {
     $outputInfo = Get-Item $outputFile
     if ($outputInfo.Length -eq 0) {
         throw "Expected output file is empty: $outputFile"
+    }
+
+    $completeHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
+
+    Write-Host "Running skip-existing smoke check for complete output"
+    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir --skip-existing
+    if ($LASTEXITCODE -ne 0) {
+        throw "Skip-existing smoke check failed with exit code $LASTEXITCODE"
+    }
+
+    $afterCompleteSkipHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
+    if ($afterCompleteSkipHash -ne $completeHash) {
+        throw "Expected output to remain unchanged with --skip-existing: $outputFile"
+    }
+
+    [System.IO.File]::WriteAllText($outputFile, "skip-existing-sentinel")
+    $sentinelHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
+
+    Write-Host "Running skip-existing smoke check for incomplete output"
+    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir --skip-existing
+    if ($LASTEXITCODE -ne 0) {
+        throw "Skip-existing smoke check failed with exit code $LASTEXITCODE"
+    }
+
+    $afterHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
+    if ($afterHash -eq $sentinelHash) {
+        throw "Expected incomplete output to be reconverted with --skip-existing: $outputFile"
     }
 }
 finally {
