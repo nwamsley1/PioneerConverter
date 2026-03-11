@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
+using System.Text;
 
 using ThermoFisher.CommonCore.BackgroundSubtraction;
 using ThermoFisher.CommonCore.Data;
@@ -476,6 +477,74 @@ internal static class Program
         }
         return output_paths;
     }
+
+    private static Exception UnwrapThreadManagerException(Exception exception)
+    {
+        Exception current = exception;
+        while (true)
+        {
+            Exception? next = current switch
+            {
+                TargetInvocationException { InnerException: not null } targetInvocationException => targetInvocationException.InnerException,
+                TypeInitializationException { InnerException: not null } typeInitializationException => typeInitializationException.InnerException,
+                AggregateException { InnerExceptions.Count: 1 } aggregateException => aggregateException.InnerExceptions[0],
+                _ => null
+            };
+
+            if (next == null)
+            {
+                return current;
+            }
+
+            current = next;
+        }
+    }
+
+    private static string DescribeExceptionChain(Exception exception)
+    {
+        List<string> parts = new List<string>();
+        Exception? current = exception;
+        while (current != null)
+        {
+            parts.Add($"{current.GetType().FullName}: {current.Message}");
+            current = current.InnerException;
+        }
+
+        return string.Join(" --> ", parts);
+    }
+
+    private static string FormatThreadManagerException(Exception exception)
+    {
+        Exception rootCause = UnwrapThreadManagerException(exception);
+        StringBuilder builder = new StringBuilder();
+        builder.Append("Root cause: ");
+        builder.Append(rootCause.GetType().FullName);
+        builder.Append(": ");
+        builder.Append(rootCause.Message);
+
+        string exceptionChain = DescribeExceptionChain(exception);
+        string rootCauseSummary = $"{rootCause.GetType().FullName}: {rootCause.Message}";
+        if (!string.Equals(exceptionChain, rootCauseSummary, StringComparison.Ordinal))
+        {
+            builder.AppendLine();
+            builder.Append("Exception chain: ");
+            builder.Append(exceptionChain);
+        }
+
+        string? stackTrace = !string.IsNullOrWhiteSpace(rootCause.StackTrace)
+            ? rootCause.StackTrace
+            : exception.StackTrace;
+        if (!string.IsNullOrWhiteSpace(stackTrace))
+        {
+            builder.AppendLine();
+            builder.Append("Stack trace:");
+            builder.AppendLine();
+            builder.Append(stackTrace.Trim());
+        }
+
+        return builder.ToString();
+    }
+
     static void ProcessFile(string inputFile, string outputFile, int batchSize, int scanThreads, int scanChunkSize)
     {
         //var myThreadManager = RawFileReaderFactory.CreateThreadManager("/Users/n.t.wamsley/Desktop/20230324_OLEP08_200ng_30min_E20H50Y30_180K_2Th3p5ms_02.raw");
@@ -641,10 +710,12 @@ internal static class Program
                 scanThreadManager = null;
                 scanParallelOptions = null;
                 Console.WriteLine(
-                    "Warning: scan-thread mode unavailable for {0} ({1}: {2}). Falling back to single-thread scan extraction.",
-                    Path.GetFileNameWithoutExtension(inputFile),
-                    ex.GetType().Name,
-                    ex.Message);
+                    "Warning: scan-thread mode unavailable for {0}. Falling back to single-thread scan extraction.",
+                    Path.GetFileName(inputFile));
+                Console.WriteLine(
+                    "Warning details:{0}{1}",
+                    Environment.NewLine,
+                    FormatThreadManagerException(ex));
             }
         }
 

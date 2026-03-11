@@ -9,4 +9,4 @@ The `PioneerConverter.iss` script can be built with [Inno Setup](https://jrsoftw
 3. Compile the script to generate `PioneerConverter-win-<version>-Setup.exe`,
    where `<version>` matches the release tag.
 
-The installer places the application in `Program Files\\PioneerConverter` and optionally adds the directory to your `PATH`.
+The installer places the application in `Program Files\\PioneerConverter`. The `bin` subdirectory contains `PioneerConverter.exe` and the runtime files it needs, and the optional PATH step adds that `bin` directory.
