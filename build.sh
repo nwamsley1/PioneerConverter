@@ -51,8 +51,7 @@ build_linux() {
     print_step "Building for Linux x64"
     dotnet publish PioneerConverter.csproj -c Release \
       -r linux-x64 \
-      -p:PublishSingleFile=true \
-      -p:IncludeNativeLibrariesForSelfExtract=true \
+      -p:PublishSingleFile=false \
       -p:PublishReadyToRun=false \
       -p:PublishTrimmed=false \
       -p:DebugType=None \
@@ -61,9 +60,9 @@ build_linux() {
       --self-contained true \
       -o dist/PioneerConverter-linux-x64
 
-    chmod +x dist/PioneerConverter-linux-x64/PioneerConverter
     mkdir -p dist/PioneerConverter-linux-x64/bin
-    mv dist/PioneerConverter-linux-x64/PioneerConverter dist/PioneerConverter-linux-x64/bin/
+    find dist/PioneerConverter-linux-x64 -mindepth 1 -maxdepth 1 ! -name bin ! -name lib -exec mv {} dist/PioneerConverter-linux-x64/bin/ \;
+    chmod +x dist/PioneerConverter-linux-x64/bin/PioneerConverter
 }
 
 build_windows() {
@@ -72,8 +71,7 @@ build_windows() {
     print_step "Building for Windows x64"
     dotnet publish PioneerConverter.csproj -c Release \
       -r win-x64 \
-      -p:PublishSingleFile=true \
-      -p:IncludeNativeLibrariesForSelfExtract=true \
+      -p:PublishSingleFile=false \
       -p:PublishReadyToRun=false \
       -p:PublishTrimmed=false \
       -p:DebugType=None \
@@ -83,7 +81,7 @@ build_windows() {
       -o dist/PioneerConverter-win-x64
 
     mkdir -p dist/PioneerConverter-win-x64/bin
-    mv dist/PioneerConverter-win-x64/PioneerConverter.exe dist/PioneerConverter-win-x64/bin/
+    find dist/PioneerConverter-win-x64 -mindepth 1 -maxdepth 1 ! -name bin ! -name lib -exec mv {} dist/PioneerConverter-win-x64/bin/ \;
 }
 
 BUILT=()
