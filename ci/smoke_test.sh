@@ -31,7 +31,7 @@ cp "${FIXTURE_PATH}" "${TMP_FIXTURE}"
 
 echo "Running conversion smoke test"
 OUTPUT_DIR="${TMP_DIR}/custom_out"
-"${EXECUTABLE}" "${TMP_FIXTURE}" -b 50 -n 1 -o "${OUTPUT_DIR}"
+"${EXECUTABLE}" "${TMP_FIXTURE}" -b 50 -o "${OUTPUT_DIR}"
 
 OUTPUT_FILE="${OUTPUT_DIR}/smoke.arrow"
 if [[ ! -s "${OUTPUT_FILE}" ]]; then
@@ -42,7 +42,7 @@ fi
 COMPLETE_HASH="$(shasum -a 256 "${OUTPUT_FILE}" | awk '{print $1}')"
 
 echo "Running skip-existing smoke check for complete output"
-"${EXECUTABLE}" "${TMP_FIXTURE}" -b 50 -n 1 -o "${OUTPUT_DIR}" --skip-existing
+"${EXECUTABLE}" "${TMP_FIXTURE}" -b 50 -o "${OUTPUT_DIR}" --skip-existing
 
 AFTER_COMPLETE_SKIP_HASH="$(shasum -a 256 "${OUTPUT_FILE}" | awk '{print $1}')"
 if [[ "${AFTER_COMPLETE_SKIP_HASH}" != "${COMPLETE_HASH}" ]]; then
@@ -54,7 +54,7 @@ printf "skip-existing-sentinel" > "${OUTPUT_FILE}"
 SENTINEL_HASH="$(shasum -a 256 "${OUTPUT_FILE}" | awk '{print $1}')"
 
 echo "Running skip-existing smoke check for incomplete output"
-"${EXECUTABLE}" "${TMP_FIXTURE}" -b 50 -n 1 -o "${OUTPUT_DIR}" --skip-existing
+"${EXECUTABLE}" "${TMP_FIXTURE}" -b 50 -o "${OUTPUT_DIR}" --skip-existing
 
 AFTER_RECONVERT_HASH="$(shasum -a 256 "${OUTPUT_FILE}" | awk '{print $1}')"
 if [[ "${AFTER_RECONVERT_HASH}" == "${SENTINEL_HASH}" ]]; then
