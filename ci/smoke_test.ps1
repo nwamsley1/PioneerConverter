@@ -37,7 +37,7 @@ try {
 
     Write-Host "Running conversion smoke test"
     $outputDir = Join-Path $tmpDir "custom_out"
-    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir
+    & $exePath $tmpFixture -b 50 -o $outputDir
     if ($LASTEXITCODE -ne 0) {
         throw "Conversion smoke test failed with exit code $LASTEXITCODE"
     }
@@ -55,7 +55,7 @@ try {
     $completeHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
 
     Write-Host "Running skip-existing smoke check for complete output"
-    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir --skip-existing
+    & $exePath $tmpFixture -b 50 -o $outputDir --skip-existing
     if ($LASTEXITCODE -ne 0) {
         throw "Skip-existing smoke check failed with exit code $LASTEXITCODE"
     }
@@ -69,7 +69,7 @@ try {
     $sentinelHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
 
     Write-Host "Running skip-existing smoke check for incomplete output"
-    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir --skip-existing
+    & $exePath $tmpFixture -b 50 -o $outputDir --skip-existing
     if ($LASTEXITCODE -ne 0) {
         throw "Skip-existing smoke check failed with exit code $LASTEXITCODE"
     }
