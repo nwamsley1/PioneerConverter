@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../PioneerConverter.csproj" />
+    <Reference Include="ThermoFisher.CommonCore.Data"><HintPath>../../Libs/NetCore/ThermoFisher.CommonCore.Data.dll</HintPath></Reference>
+    <Reference Include="ThermoFisher.CommonCore.RawFileReader"><HintPath>../../Libs/NetCore/ThermoFisher.CommonCore.RawFileReader.dll</HintPath></Reference>
+    <Reference Include="Apache.Arrow"><HintPath>../../Libs/Apache.Arrow.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

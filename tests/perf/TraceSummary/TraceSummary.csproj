@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <!-- Reuse the exact TraceEvent dependency shipped with the pinned dotnet-trace tool. -->
+  <ItemGroup>
+    <Reference Include="Microsoft.Diagnostics.Tracing.TraceEvent">
+      <HintPath>$(TraceEventDirectory)/Microsoft.Diagnostics.Tracing.TraceEvent.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Diagnostics.FastSerialization">
+      <HintPath>$(TraceEventDirectory)/Microsoft.Diagnostics.FastSerialization.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <Target Name="RequireTraceEventDirectory" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(TraceEventDirectory)/Microsoft.Diagnostics.Tracing.TraceEvent.dll')"
+           Text="Set -p:TraceEventDirectory to the tools/net6.0/any directory inside the installed dotnet-trace 8.0.547301 package." />
+  </Target>
+</Project>

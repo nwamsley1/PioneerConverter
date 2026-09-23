@@ -37,7 +37,18 @@ try {
 
     Write-Host "Running conversion smoke test"
     $outputDir = Join-Path $tmpDir "custom_out"
-    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir
+    foreach ($removedFlag in @("--concurrent-files", "-n")) {
+        # Capture native stderr as text without PowerShell converting it to a terminating error.
+        $oldPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        $flagOutput = & $exePath $tmpFixture $removedFlag 1 -o $outputDir 2>&1 | Out-String
+        $flagExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $oldPreference
+        if ($flagExitCode -eq 0 -or !$flagOutput.Contains($removedFlag)) {
+            throw "Removed option must fail and identify itself: $removedFlag ($flagOutput)"
+        }
+    }
+    & $exePath $tmpFixture -b 50 -t 2 --scan-chunk-size 17 -o $outputDir
     if ($LASTEXITCODE -ne 0) {
         throw "Conversion smoke test failed with exit code $LASTEXITCODE"
     }
@@ -55,7 +66,7 @@ try {
     $completeHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
 
     Write-Host "Running skip-existing smoke check for complete output"
-    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir --skip-existing
+    & $exePath $tmpFixture -b 50 -o $outputDir --skip-existing
     if ($LASTEXITCODE -ne 0) {
         throw "Skip-existing smoke check failed with exit code $LASTEXITCODE"
     }
@@ -69,7 +80,7 @@ try {
     $sentinelHash = (Get-FileHash -Path $outputFile -Algorithm SHA256).Hash
 
     Write-Host "Running skip-existing smoke check for incomplete output"
-    & $exePath $tmpFixture -b 50 -n 1 -o $outputDir --skip-existing
+    & $exePath $tmpFixture -b 50 -o $outputDir --skip-existing
     if ($LASTEXITCODE -ne 0) {
         throw "Skip-existing smoke check failed with exit code $LASTEXITCODE"
     }

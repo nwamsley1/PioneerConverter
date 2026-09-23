@@ -53,6 +53,20 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Test pipeline ownership and cancellation
+        run: dotnet run --project tests/PipelineRegression/PipelineRegression.csproj -c Release
+
+      - name: Test bounded delegated RAW cache
+        run: dotnet run --project tests/RawCacheRegression/RawCacheRegression.csproj -c Release
+
+      - name: Verify bundled SDK centroid semantics
+        run: dotnet run --project tests/SdkSemantics/SdkSemantics.csproj -c Release -- tests/fixtures/raw/smoke.raw
+
       - name: Force authenticated GitHub git URLs
         run: |
           git config --global --unset-all url."https://github.com/".insteadOf || true
@@ -128,3 +142,6 @@ jobs:
         if: runner.os == 'Windows'
         run: ./ci/smoke_test.ps1 -PublishDir "dist/${{ matrix.rid }}" -FixturePath "tests/fixtures/raw/smoke.raw"
         shell: pwsh
+
+      - name: Test published CLI, ordering, and Arrow boundary equivalence
+        run: python tests/run_regression.py --candidate "dist/${{ matrix.rid }}/PioneerConverter.dll"
