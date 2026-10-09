@@ -695,6 +695,7 @@ internal static class Program
                             .Field(collisionEnergyEvField)
                             .Field(msOrderField)
                             .Field(cycleIdxField)
+                            .Metadata(AcquisitionMetadata(rawFile, firstScanNumber, lastScanNumber))
                             .Build();
 
         IRawFileThreadManager? scanThreadManager = null;
@@ -1059,6 +1060,30 @@ internal static class Program
         }
 
         return workers;
+    }
+
+    // File-level facts a search needs before reading any scan, stored as Arrow schema
+    // metadata (Pioneer reads it with getAcquisitionMetadata). mass_resolution is the run
+    // header's half peak width; it is written only for ion-trap MS2 because Orbitrap/Astral
+    // files carry the same 0.5 default, which says nothing about their resolution.
+    static Dictionary<string, string> AcquisitionMetadata(IRawDataPlus rawFile, int firstScanNumber, int lastScanNumber)
+    {
+        var instrument = rawFile.GetInstrumentData();
+        var metadata = new Dictionary<string, string>
+        {
+            ["instrument_model"] = instrument.Model ?? ""
+        };
+        for (int scanNumber = firstScanNumber; scanNumber <= lastScanNumber; scanNumber++)
+        {
+            var filter = rawFile.GetFilterForScanNumber(scanNumber);
+            if (filter.MSOrder != MSOrderType.Ms2) continue;
+            var analyzer = filter.MassAnalyzer;
+            metadata["ms2_mass_analyzer"] = analyzer.ToString().Replace("MassAnalyzer", "");
+            if (analyzer == MassAnalyzerType.MassAnalyzerITMS)
+                metadata["mass_resolution"] = rawFile.RunHeaderEx.MassResolution.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            break;
+        }
+        return metadata;
     }
 
     static ScanRow ReadScanRow(IRawDataPlus rawFile, int scanNumber, ref int hcdEnergyFieldIndex, ref int fillTimeFieldIndex)
