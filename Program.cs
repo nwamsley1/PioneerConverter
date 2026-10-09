@@ -1071,6 +1071,14 @@ internal static class Program
         var centroid = rawFile.GetSimplifiedCentroids(scanNumber);
         var masses = centroid.Masses ?? System.Array.Empty<double>();
         var intensities = centroid.Intensities ?? System.Array.Empty<double>();
+        // Ion-trap (ITMS) scans have no centroid stream; when acquired in
+        // centroid mode their peaks are the scan data itself.
+        if (masses.Length == 0 && stats.IsCentroidScan)
+        {
+            var scan = rawFile.GetSimplifiedScan(scanNumber);
+            masses = scan.Masses ?? System.Array.Empty<double>();
+            intensities = scan.Intensities ?? System.Array.Empty<double>();
+        }
         int centroidLength = masses.Length;
         if (intensities.Length != centroidLength)
             throw new InvalidDataException($"Centroid mass/intensity length mismatch at scan {scanNumber}.");
