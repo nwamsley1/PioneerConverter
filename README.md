@@ -100,3 +100,11 @@ Each row in the Arrow table corresponds to a scan in the `.raw` file:
 | collisionEnergyField | Union{Float32, Missing} | Normalized collision energy |
 | collisionEnergyEvField | Union{Float32, Missing} | Collision energy (eV) |
 | msOrder | UInt8 | The n for an MSn scan |
+
+The Arrow schema metadata also records file-level facts:
+
+| Key | Description |
+|-----|-------------|
+| instrument_model | Instrument model from the `.raw` file (e.g. `Orbitrap Astral`, `Stellar`) |
+| ms2_mass_analyzer | Mass analyzer of the first MS2 scan (e.g. `FTMS`, `ASTMS`, `ITMS`) |
+| mass_resolution | Half peak width in Th from the run header (`0.5` for unit resolution). Written only when `ms2_mass_analyzer` is `ITMS`; Orbitrap and Astral files report the same default value. |
