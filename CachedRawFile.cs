@@ -88,7 +88,6 @@ internal sealed class CachedViewManager : IViewCollectionManager, IDisposable
         if (disposed) return;
         disposed = true;
         cache.Dispose();
-        Console.WriteLine(cache.FormatStatistics());
     }
 }
 

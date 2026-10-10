@@ -326,13 +326,16 @@ internal static class Program
                 HasCompleteExistingOutput(file_paths[fileIndex], output_paths[fileIndex]))
             {
                 skippedCompleteFiles++;
+                Console.WriteLine($"[{fileIndex + 1}/{file_paths.Length}] Skipped complete: {Path.GetFileNameWithoutExtension(file_paths[fileIndex])} ({file_paths.Length - fileIndex - 1} remaining)");
                 continue;
             }
 
+            Console.WriteLine($"[{fileIndex + 1}/{file_paths.Length}] Starting Conversion For: {Path.GetFileNameWithoutExtension(file_paths[fileIndex])}");
             ProcessFile(file_paths[fileIndex], output_paths[fileIndex], options.BatchSize,
                 options.ThreadsPerFile, options.ScanChunkSize, cancellationToken);
             convertedFiles++;
         }
+        Console.WriteLine("==================================================");
         Console.WriteLine($"Completed: converted={convertedFiles} skipped-complete={skippedCompleteFiles}");
 
         totalExecutionWatch.Stop();
@@ -574,7 +577,6 @@ internal static class Program
     static void ProcessFile(string inputFile, string outputFile, int batchSize, int scanThreads,
         int scanChunkSize, CancellationToken cancellationToken)
     {
-        Console.WriteLine("Starting Conversion For: {0}", Path.GetFileNameWithoutExtension(inputFile));
         var watch = Stopwatch.StartNew();
         using var viewManager = new CachedViewManager(inputFile);
         using var rawFile = RawFileReaderAdapter.DelegatedAccessFileFactory(inputFile, viewManager);
@@ -729,8 +731,6 @@ internal static class Program
                 Interlocked.CompareExchange(ref failure, ExceptionDispatchInfo.Capture(ex), null);
                 cancellation.Cancel();
             }
-            long extractionTicks = 0, assemblyTicks = 0, writingTicks = 0;
-            int chunkCount = 0, batchCount = 0;
             var producer = Task.Run(() =>
             {
                 try
@@ -743,7 +743,6 @@ internal static class Program
                     for (long start = firstScanNumber; start <= lastScanNumber;)
                     {
                         token.ThrowIfCancellationRequested();
-                        long started = Stopwatch.GetTimestamp();
                         // Cap the reference array as well as payload bytes, even for extreme CLI values.
                         int capacity = (int)Math.Min(Math.Min(scanChunkSize, 65536), lastScanNumber - start + 1);
                         var rows = new ScanRow[capacity];
@@ -770,9 +769,7 @@ internal static class Program
                                 Extract(worker.RawFile, ref worker.HcdEnergyFieldIndex, ref worker.FillTimeFieldIndex);
                             });
                         int count = Math.Min(next + 1, capacity);
-                        extractionTicks += Stopwatch.GetTimestamp() - started;
                         chunks.Add(new ScanChunk(rows, count), bytes + 8L * capacity);
-                        chunkCount++;
                         start += count;
                     }
                 }
@@ -789,11 +786,9 @@ internal static class Program
                     void Publish()
                     {
                         if (builder == null) return;
-                        long started = Stopwatch.GetTimestamp();
                         var batch = builder.Build(schema);
                         long bytes = builder.EstimatedBytes;
                         builder = null;
-                        assemblyTicks += Stopwatch.GetTimestamp() - started;
                         try { batches.Add(batch, bytes); }
                         catch { batch.Dispose(); throw; }
                     }
@@ -809,11 +804,9 @@ internal static class Program
                             // Leave room before appending a large row; one indivisible row may exceed the target.
                             if (builder != null && builder.EstimatedBytes + row.ArrowBytes > BatchTargetBytes)
                                 Publish();
-                            long started = Stopwatch.GetTimestamp();
                             builder ??= new ArrowBatchBuilder(Math.Min(batchSize, 65536));
                             builder.Append(row, cycle, scratch);
                             chunk.Rows[i] = null!; // SDK arrays become collectible as soon as copied.
-                            assemblyTicks += Stopwatch.GetTimestamp() - started;
                             if (builder.Count >= batchSize || builder.EstimatedBytes >= BatchTargetBytes)
                                 Publish();
                         }
@@ -828,24 +821,17 @@ internal static class Program
                 using var fileStream = new FileStream(temporaryOutput, FileMode.CreateNew,
                     FileAccess.Write, FileShare.None, 1 << 20);
                 using var writer = new ArrowFileWriter(fileStream, schema);
-                long started = Stopwatch.GetTimestamp();
                 writer.WriteStart();
-                writingTicks += Stopwatch.GetTimestamp() - started;
                 while (true)
                 {
                     using var lease = batches.Read();
                     if (lease == null) break;
-                    started = Stopwatch.GetTimestamp();
                     writer.WriteRecordBatch(lease.Value);
-                    writingTicks += Stopwatch.GetTimestamp() - started;
-                    batchCount++;
                 }
                 failure?.Throw();
                 token.ThrowIfCancellationRequested();
-                started = Stopwatch.GetTimestamp();
                 writer.WriteEnd();
                 fileStream.Flush();
-                writingTicks += Stopwatch.GetTimestamp() - started;
             }
             catch (Exception ex) { Fail(ex); }
             finally
@@ -858,9 +844,7 @@ internal static class Program
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporaryOutput, outputFile, overwrite: true);
             watch.Stop();
-            static double Milliseconds(long ticks) => ticks * 1000.0 / Stopwatch.Frequency;
-            Console.WriteLine(FormattableString.Invariant($"PERF extraction_ms={Milliseconds(extractionTicks):F3} assembly_ms={Milliseconds(assemblyTicks):F3} writing_ms={Milliseconds(writingTicks):F3} elapsed_ms={watch.Elapsed.TotalMilliseconds:F3} decoded_queue_peak_bytes={chunks.PeakBytes} batch_queue_peak_bytes={batches.PeakBytes} chunks={chunkCount} batches={batchCount}"));
-            Console.WriteLine("Execution Time: {0} ms for {1}", watch.ElapsedMilliseconds, Path.GetFileNameWithoutExtension(inputFile));
+            Console.WriteLine("Conversion Time: {0} ms for {1}", watch.ElapsedMilliseconds, Path.GetFileNameWithoutExtension(inputFile));
         }
         finally
         {
