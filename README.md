@@ -113,3 +113,6 @@ Columns are unaffected. Read it in Julia with `Arrow.getmetadata(Arrow.Table("fi
 | acquisition_mode_evidence | e.g. `thermo dependent ms2 48211/48211` | Dependent MS2 scans / all MS2 scans |
 | acquisition_mode_version | `1` | Version of the decision rule |
 | converter_version | e.g. `PioneerConverter 1.4.0` | Converter that wrote the file |
+| instrument_model | e.g. `Orbitrap Astral`, `Stellar` | Instrument model from the `.raw` file |
+| ms2_mass_analyzer | e.g. `FTMS`, `ASTMS`, `ITMS` | Mass analyzer of the first MS2 scan |
+| mass_resolution | e.g. `0.5` | Half peak width in Th from the run header (`0.5` for unit resolution). Written only when `ms2_mass_analyzer` is `ITMS`; Orbitrap and Astral files report the same default value. |
