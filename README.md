@@ -100,3 +100,16 @@ Each row in the Arrow table corresponds to a scan in the `.raw` file:
 | collisionEnergyField | Union{Float32, Missing} | Normalized collision energy |
 | collisionEnergyEvField | Union{Float32, Missing} | Collision energy (eV) |
 | msOrder | UInt8 | The n for an MSn scan |
+
+### File metadata
+
+Each `.arrow` file also carries schema-level key/value metadata describing the run.
+Columns are unaffected. Read it in Julia with `Arrow.getmetadata(Arrow.Table("file.arrow"))`.
+
+| Key | Values | Description |
+|-----|--------|-------------|
+| acquisition_mode | `dda`, `unknown` | `dda` when more than half of the MS2 scans carry the Thermo dependent-scan flag (` d ` in the scan filter); otherwise `unknown`, and Pioneer classifies the file from its data. A missing flag does not imply DIA (PRM, SureQuant and calibration runs also lack it). Other converters may also write `dia` or `targeted`. |
+| acquisition_mode_source | `vendor` | The decision comes from the vendor's scan annotation |
+| acquisition_mode_evidence | e.g. `thermo dependent ms2 48211/48211` | Dependent MS2 scans / all MS2 scans |
+| acquisition_mode_version | `1` | Version of the decision rule |
+| converter_version | e.g. `PioneerConverter 1.4.0` | Converter that wrote the file |
