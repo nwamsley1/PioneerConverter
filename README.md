@@ -25,12 +25,15 @@ There are three ways to get **PioneerConverter**:
 
 Provide a single `.raw` file or a directory containing them. By default, converted Arrow tables are written to `arrow_out` inside the input directory.
 
+The options below describe the current source build. Run `PioneerConverter --help`
+to check the options supported by your build.
+
 ```bash
 # convert a single file
 PioneerConverter path/to/file.raw
 
 # convert a directory with options
-PioneerConverter path/to/dir -b 5000 -n 4
+PioneerConverter path/to/dir -b 5000 -t 3
 
 # convert and write output to a custom directory
 PioneerConverter path/to/dir -o path/to/output
@@ -43,14 +46,18 @@ PioneerConverter --version
 ```
 
 Options
-- `-b, --batch-size`  number of scans per batch (default: 10000)
+
+- `-b, --batch-size` maximum scans per Arrow batch (default: 1000)
 - `-o, --output-dir` output directory for `.arrow` files (default: `<input_dir>/arrow_out`)
 - `--skip-existing` skip files whose existing `.arrow` output appears complete
-- `-n, --concurrent-files` number of files to convert at the same time (default: 2)
 - `-t, --threads-per-file` scan extraction threads used for each file (default: 3)
-- `--scan-chunk-size` scan chunk size when using scan threads (default: 128)
+- `--scan-chunk-size` maximum decoded scans per extraction chunk (default: 128)
 - `--version` show program version
 - `-h, --help`        show help
+
+Directory inputs are converted one file at a time. `--threads-per-file` controls
+scan extraction within the current file. The former `-n` and `--concurrent-files`
+options are no longer supported.
 
 ## Build from source
 
