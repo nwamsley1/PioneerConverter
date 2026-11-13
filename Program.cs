@@ -678,7 +678,7 @@ internal static class Program
             .Nullable(false)
             .Build();
 
-        var schema = new Schema.Builder()
+        var schemaBuilder = new Schema.Builder()
                             .Field(massField)
                             .Field(intensityField)
                             .Field(scanHeaderField)
@@ -696,8 +696,7 @@ internal static class Program
                             .Field(collisionEnergyField)
                             .Field(collisionEnergyEvField)
                             .Field(msOrderField)
-                            .Field(cycleIdxField)
-                            .Build();
+                            .Field(cycleIdxField);
 
         IRawFileThreadManager? scanThreadManager = null;
         List<ScanReaderWorker>? scanWorkers = null;
@@ -719,6 +718,14 @@ internal static class Program
                     Console.WriteLine("Warning details:{0}{1}", Environment.NewLine, FormatThreadManagerException(ex));
                 }
             }
+
+            // Run the acquisition-mode pass on a scan reader the conversion itself uses: the SDK
+            // loads per-scan event data once per file and shares it across threaded readers, so the
+            // conversion would pay this load anyway. On the main reader it would be paid twice.
+            var acquisitionMode = AcquisitionModeInfo.FromScanEvents(scanWorkers?[0].RawFile ?? rawFile,
+                firstScanNumber, lastScanNumber, cancellationToken);
+            Console.WriteLine(acquisitionMode);
+            var schema = schemaBuilder.Metadata(acquisitionMode.Metadata()).Build();
 
             using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var token = cancellation.Token;
